@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pre/Post Test</title>
+<style>
+:root{--navy:#0a2144;--blue:#1b5fc1;--bg:#eef1f5;--line:#cfd6e0;--ink:#16202e;--mute:#5b6778;--ok:#1d7a46;--bad:#b3261e}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+header{background:var(--navy);color:#fff;padding:12px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+header b{font-size:18px}
+#who{font-size:15px;font-weight:600}
+#who small{display:block;font-weight:400;opacity:.8;font-size:13px}
+#timer{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;background:#14336a;padding:4px 14px;border-radius:6px}
+#timer.low{background:var(--bad)}
+main{max-width:900px;margin:0 auto;padding:20px}
+[hidden]{display:none!important}
+.card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:24px}
+h1{font-size:22px;margin:0 0 4px}
+p.sub{color:var(--mute);margin:0 0 18px}
+label{display:block;font-weight:600;font-size:14px;margin:14px 0 4px}
+input{width:100%;padding:11px 12px;font-size:16px;border:1px solid var(--line);border-radius:6px}
+input:focus,button:focus-visible{outline:3px solid #9fc3f5;outline-offset:1px}
+.btn{background:var(--blue);color:#fff;border:0;border-radius:6px;padding:12px 20px;font-size:16px;font-weight:600;cursor:pointer}
+.btn.alt{background:#fff;color:var(--blue);border:1px solid var(--blue)}
+.btn.go{background:var(--ok)}
+.btn:disabled{opacity:.5;cursor:default}
+.err{color:var(--bad);margin-top:12px;min-height:22px;font-size:14px}
+.err.show{background:#fdecea;border:1px solid #f2b8b5;border-radius:6px;padding:10px 12px;font-weight:600}
+input.bad{border-color:var(--bad)}
+.pwwrap{position:relative}
+.pwwrap input{padding-right:48px}
+.eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:42px;height:42px;background:none;border:0;border-radius:6px;cursor:pointer;color:var(--mute);display:grid;place-items:center}
+.eye:hover{color:var(--blue)}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+.shake{animation:shake .4s}
+.warn{background:#fff6e0;border:1px solid #e8c36a;border-radius:6px;padding:10px 12px;font-size:14px;margin:14px 0 0}
+.layout{display:grid;grid-template-columns:1fr 220px;gap:16px}
+@media(max-width:720px){.layout{grid-template-columns:1fr}}
+.qno{color:var(--mute);font-size:14px;margin-bottom:6px}
+.qtext{font-size:20px;font-weight:600;margin:0 0 14px;white-space:pre-wrap}
+.qimg{max-width:100%;max-height:320px;border-radius:6px;margin-bottom:14px;border:1px solid var(--line)}
+.opt{display:flex;gap:12px;align-items:center;width:100%;text-align:left;background:#fff;border:2px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:10px;font-size:17px;cursor:pointer;color:var(--ink)}
+.opt:hover{border-color:#8fb2e6}
+.opt.on{border-color:var(--blue);background:#e8f0fc}
+.opt:disabled{cursor:default}
+.opt:disabled:not(.on){opacity:.5}
+.opt:disabled:not(.on):hover{border-color:var(--line)}
+.opt .k{flex:none;width:30px;height:30px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px}
+.opt.on .k{background:var(--blue)}
+.opt img{max-width:100%;max-height:180px;border-radius:4px}
+.nav{display:flex;justify-content:space-between;gap:10px;margin-top:16px}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.grid button{padding:8px 0;border:1px solid var(--line);background:#fff;border-radius:6px;cursor:pointer;font-size:14px}
+.grid button.done{background:var(--navy);color:#fff;border-color:var(--navy)}
+.grid button.cur{outline:3px solid var(--blue);outline-offset:1px}
+.prog{font-size:14px;color:var(--mute);margin:0 0 10px}
+.saved{font-size:12px;color:var(--mute);margin:10px 0 0}
+.score{font-size:56px;font-weight:700;color:var(--navy);margin:8px 0}
+.modal{position:fixed;inset:0;background:rgba(10,33,68,.6);display:grid;place-items:center;padding:20px;z-index:10}
+.modal .card{max-width:400px;width:100%}
+.modal .row{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}.tbl th,.tbl td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left}
+.bar{height:10px;background:#e3e8ef;border-radius:5px;overflow:hidden;min-width:70px}.bar i{display:block;height:100%;background:var(--blue)}.bar.g i{background:var(--ok)}.bar.r i{background:var(--bad)}
+.pod{display:flex;gap:10px;margin:12px 0}.pod div{flex:1;text-align:center;background:#f3f6fb;border:1px solid var(--line);border-radius:8px;padding:12px 6px}.pod b{display:block;font-size:26px}
+.badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:700;background:#e3e8ef}.badge.berjalan{background:#d6f0e0;color:var(--ok)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}select{width:100%;padding:11px 12px;font-size:16px;border:1px solid var(--line);border-radius:6px;background:#fff}
+.sm{padding:6px 12px;font-size:14px;margin:2px}
+.kode{font-size:54px;font-weight:700;letter-spacing:8px;text-align:center;color:var(--navy);margin:6px 0}
+</style>
+</head>
+<body>
+<header>
+  <b>Pre/Post Test</b>
+  <div id="who" hidden></div>
+  <div id="timer" hidden>00:00</div>
+</header>
+<main>
+  <section id="login" class="card" style="max-width:460px;margin:30px auto">
+    <h1>Masuk ujian</h1>
+    <p class="sub">Tulis nama lengkap Anda dan kode gabung dari instructor.</p>
+    <label for="nama">Nama lengkap</label><input id="nama" autocomplete="off" maxlength="40">
+    <label for="pw">Kode gabung</label>
+    <input id="pw" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="6 angka dari instructor">
+    <div class="warn" id="rule">Selama ujian berlangsung, jangan pindah tab atau jendela. Jawaban akan terkirim otomatis dan ujian berakhir.</div>
+    <div class="err" id="err" role="alert"></div>
+    <button class="btn" id="btnLogin" onclick="doLogin()">Mulai ujian</button>
+    <p style="margin:16px 0 0;font-size:13px"><a href="#" onclick="show('admin');return false">Masuk sebagai instructor</a></p>
+  </section>
+
+  <section id="exam" hidden>
+    <div class="layout">
+      <div class="card">
+        <div class="qno" id="qno"></div>
+        <h2 class="qtext" id="qtext"></h2>
+        <img class="qimg" id="qimg" alt="Gambar soal" hidden>
+        <div id="opts"></div>
+        <div class="nav">
+          <button class="btn alt" id="prev" onclick="go(-1)">Sebelumnya</button>
+          <button class="btn" id="next" onclick="go(1)">Berikutnya</button>
+          <button class="btn go" id="send" onclick="tanya()" hidden>Kirim jawaban</button>
+        </div>
+      </div>
+      <div class="card">
+        <p class="prog" id="prog"></p>
+        <div class="grid" id="grid"></div>
+        <p style="margin:16px 0 0"><button class="btn go" style="width:100%" onclick="tanya()">Kirim jawaban</button></p>
+        <p class="saved" id="saved"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="admin" hidden>
+    <div class="card" id="aLogin" style="max-width:460px;margin:30px auto">
+      <h1>Panel instructor</h1><label for="apw">Password instructor</label><input id="apw" type="password">
+      <div class="err" id="aErr"></div>
+      <button class="btn" onclick="aLogin()">Masuk</button> <button class="btn alt" onclick="show('login')">Kembali</button>
+    </div>
+    <div id="aMain" hidden>
+      <div class="card" style="margin-bottom:16px">
+        <h1 style="font-size:19px">Buat sesi tes</h1>
+        <div class="row2"><div><label>Judul quiz</label><select id="aKat"></select></div>
+        <div><label>Jenis</label><select id="aJenis"><option>Pre Test</option><option>Post Test</option></select></div>
+        <div><label>Pelaksanaan</label><select id="aMode" onchange="$('aJad').hidden=this.value==='live'"><option value="live">Live (instructor menekan Mulai)</option><option value="jadwal">Terjadwal (batas waktu)</option></select></div>
+        <div><label>Durasi (menit)</label><input id="aDur" type="number" value="30" min="1"></div></div>
+        <div class="row2" id="aJad" hidden><div><label>Dibuka</label><input id="aMulai" type="datetime-local"></div><div><label>Ditutup</label><input id="aSelesai" type="datetime-local"></div></div>
+        <p style="margin:16px 0 0"><button class="btn" onclick="aBuat()">Buat sesi</button></p>
+      </div>
+      <div class="card" style="margin-bottom:16px"><h1 style="font-size:19px">Daftar sesi</h1><div id="aList"></div></div>
+      <div class="card" id="aDash" hidden></div>
+    </div>
+  </section>
+
+  <section id="done" class="card" style="max-width:460px;margin:30px auto" hidden>
+    <h1 id="doneTitle">Jawaban tersimpan</h1>
+    <p class="sub" id="doneWhy"></p>
+    <div id="result"></div>
+    <p class="sub" id="sisa"></p>
+    <button class="btn" id="retry" onclick="kirimUlang()" hidden>Kirim ulang</button>
+    <button class="btn" id="back" onclick="hapusLokal();location.reload()">Kembali ke halaman masuk</button>
+  </section>
+</main>
+
+<div class="modal" id="confirm" hidden>
+  <div class="card" role="dialog" aria-modal="true">
+    <h1 style="font-size:19px" id="cTitle">Kirim jawaban?</h1>
+    <p class="sub" id="cText" style="margin:8px 0 0"></p>
+    <div class="row">
+      <button class="btn alt" onclick="$('confirm').hidden=true">Kembali mengerjakan</button>
+      <button class="btn go" onclick="$('confirm').hidden=true;selesai('')">Kirim</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Alamat web app Apps Script (hasil Deploy). Halaman ini bisa di-host di GitHub Pages.
+var API_URL = 'https://script.google.com/macros/s/AKfycbyuEDgUfb_ZI4JDKr2rQrh0yygR47_F6b2EqlC6A1f3IMCAc-uLhy5jqHj9EmLLGSql/exec';
+
+function api(fn, args){
+  return fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },   // tanpa preflight CORS
+    body: JSON.stringify({ fn: fn, args: args }),
+    keepalive: true                                           // tetap terkirim saat tab ditutup/ditinggalkan
+  }).then(function(r){ return r.json(); }).then(function(j){
+    if(j.error) throw new Error(j.error);
+    return j.result;
+  });
+}
+// Pengganti google.script.run supaya sisa kode tidak berubah.
+var google = { script: { run: (function mk(ok, fail){
+  return new Proxy({}, { get: function(_, name){
+    if(name === 'withSuccessHandler') return function(f){ return mk(f, fail); };
+    if(name === 'withFailureHandler') return function(f){ return mk(ok, f); };
+    return function(){
+      api(name, [].slice.call(arguments)).then(function(r){ if(ok) ok(r); }, function(e){ if(fail) fail(e); });
+    };
+  }});
+})(null, null) } };
+</script>
+<script>
+var S = null, sent = false, armed = false, timerId = null, autoId = null, retryId = null, lastWhy = '';
+var KEY = 'prepost_sesi_v1';
+var AUTOSAVE_MS = 5 * 60 * 1000;
+function $(id){ return document.getElementById(id); }
+function show(id){ ['login','exam','done','admin'].forEach(function(x){ $(x).hidden = (x !== id); }); }
+function err(m, bad){
+  var e = $('err'); e.textContent = m || ''; e.className = 'err' + (m ? ' show' : '');
+  ['nama','pw'].forEach(function(id){ $(id).classList.toggle('bad', !!(m && bad)); });
+  if(m && bad){ var c = $('login'); c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake'); }
+}
+function togglePw(){
+  var p = $('pw'), show = p.type === 'password';
+  p.type = show ? 'text' : 'password';
+  $('eyeOn').hidden = show; $('eyeOff').hidden = !show;
+  var b = $('eye'); b.setAttribute('aria-pressed', show);
+  b.setAttribute('aria-label', show ? 'Sembunyikan password' : 'Tampilkan password');
+  b.title = b.getAttribute('aria-label');
+  p.focus();
+}
+['nama','pw'].forEach(function(id){
+  $(id).addEventListener('input', function(){ if($('err').textContent) err(''); });
+  $(id).addEventListener('keydown', function(e){ if(e.key === 'Enter' && !$('btnLogin').disabled) doLogin(); });
+});
+
+// ===== Penyimpanan lokal (bertahan saat refresh) =====
+function simpanLokal(){
+  if(!S) return;
+  try{ localStorage.setItem(KEY, JSON.stringify({ S: S, sent: sent, why: lastWhy })); }catch(e){}
+}
+function hapusLokal(){ try{ localStorage.removeItem(KEY); }catch(e){} }
+
+// Acak (Fisher-Yates) memakai crypto agar tiap peserta & tiap buka berbeda.
+function rnd(n){ return crypto.getRandomValues(new Uint32Array(1))[0] % n; }
+function shuffle(a){
+  a = a.slice();
+  for(var i = a.length - 1; i > 0; i--){ var j = rnd(i + 1), t = a[i]; a[i] = a[j]; a[j] = t; }
+  return a;
+}
+// Jawaban dikirim dengan urutan soal ASLI (server menilai berdasarkan urutan & kunci asli).
+function jawabAsli(){
+  var a = S.soal.map(function(){ return null; });
+  S.soal.forEach(function(q, i){ a[q.idx] = S.jawab[i]; });
+  return a;
+}
+function lobby(m){
+  busy(true); $('btnLogin').textContent = 'Menunggu instructor...';
+  $('rule').textContent = m || 'Menunggu instructor memulai tes. Jangan tutup halaman ini.';
+  setTimeout(function(){ if(!S) doLogin(true); }, 6000 + Math.random() * 6000);   // jeda acak agar server tidak kebanjiran
+}
+function busy(b){ $('btnLogin').disabled = b; $('btnLogin').textContent = b ? 'Memeriksa...' : 'Mulai ujian'; }
+
+function doLogin(p){
+  var cred = { nama: $('nama').value, kode: $('pw').value.trim(), poll: p === true };
+  if(!cred.nama.trim() || !cred.kode){ err('Isi nama dan kode gabung.', true); return; }
+  err(''); busy(true);
+  google.script.run
+    .withSuccessHandler(function(r){
+      busy(false);
+      if(!r || !r.ok){
+        err((r && r.msg) || 'Kode gabung tidak ditemukan. Periksa kembali kode dari instructor.', true);
+        $('pw').select(); return;
+      }
+      if(r.menunggu){ lobby(r.msg); return; }
+      var acak = shuffle(r.soal.map(function(q, idx){
+        var c = {}; for(var k in q) c[k] = q[k];
+        c.idx = idx; c.opsi = shuffle(q.opsi); return c;
+      }));
+      S = { token: r.token, soal: acak, jawab: acak.map(function(){ return null; }), i: 0,
+            end: Date.now() + r.sisaDetik * 1000, auto: r.autoSubmit, maks: r.maks, sisa: r.sisaPercobaan,
+            nama: r.nama, perusahaan: r.perusahaan, antrian: {} };
+      if(r.jawabLama) S.soal.forEach(function(q, i){ var v = r.jawabLama[q.idx]; if(v) S.jawab[i] = v; });
+      if(r.judul) document.querySelector('header b').textContent = r.judul;
+      sent = false; lastWhy = '';
+      $('pw').value = '';
+      simpanLokal();
+      mulai();
+    })
+    .withFailureHandler(function(e){ busy(false); err('Gagal terhubung ke server. Periksa koneksi internet lalu coba lagi. (' + e.message + ')'); })
+    .login(cred);
+}
+
+// Menampilkan layar ujian (dipakai saat login baru maupun saat dipulihkan setelah refresh).
+function mulai(){
+  S.antrian = S.antrian || {};
+  var w = $('who'); w.innerHTML = ''; w.hidden = false;
+  w.appendChild(document.createTextNode(S.nama || ''));
+  var sm = document.createElement('small'); sm.textContent = S.perusahaan || ''; w.appendChild(sm);
+  $('timer').hidden = false;
+  window.onbeforeunload = function(){ return 'Ujian sedang berjalan.'; };
+  show('exam'); render(); tick();
+  clearInterval(timerId); clearInterval(autoId);
+  timerId = setInterval(tick, 500);
+  autoId = setInterval(autosave, AUTOSAVE_MS);
+  // Cadangan: kirim tepat saat waktu habis walau interval tertahan browser.
+  setTimeout(function(){ if(!sent) tick(); }, Math.max(0, S.end - Date.now()) + 300);
+  setTimeout(function(){ armed = true; }, 2000);
+  kirimAntrian();   // kirim jawaban yang belum sempat terkirim sebelum refresh
+}
+
+// ===== Simpan per soal (langsung ke spreadsheet tiap pilih jawaban) =====
+var mengirim = false, antrianId = null;
+function status(m){ $('saved').textContent = m; }
+function pilih(s, k){
+  if(S.jawab[S.i]) return;       // jawaban pertama final, tidak bisa diganti
+  S.jawab[S.i] = k;
+  S.antrian[s.idx] = k;          // idx = nomor soal ASLI, k = jawaban yang dipilih
+  render();
+  kirimAntrian();
+  var cur = S.i;                 // gaya Quizizz: otomatis lanjut ke soal berikutnya
+  if(cur < S.soal.length - 1) setTimeout(function(){ if(S && !sent && S.i === cur) go(1); }, 600);
+}
+function kirimAntrian(){
+  if(!S || sent || mengirim) return;
+  var keys = Object.keys(S.antrian || {});
+  if(!keys.length){ status('Semua jawaban tersimpan ✓ ' + jam()); return; }
+  var idx = keys[0], k = S.antrian[idx];
+  mengirim = true; status('Menyimpan...');
+  google.script.run
+    .withSuccessHandler(function(){
+      mengirim = false;
+      if(!S || sent) return;
+      if(S.antrian[idx] === k) delete S.antrian[idx];   // kalau diganti lagi saat mengirim, tetap di antrian
+      simpanLokal(); kirimAntrian();
+    })
+    .withFailureHandler(function(){
+      mengirim = false;
+      status('Sinyal bermasalah, jawaban dikirim ulang otomatis...');
+      clearTimeout(antrianId); antrianId = setTimeout(kirimAntrian, 4000);
+    })
+    .jawab(S.token, Number(idx), k);
+}
+
+// ===== Auto save tiap 5 menit =====
+function jam(){ var d = new Date(), p = function(n){ return (n < 10 ? '0' : '') + n; }; return p(d.getHours()) + ':' + p(d.getMinutes()); }
+function autosave(){
+  if(!S || sent) return;
+  simpanLokal();
+  $('saved').textContent = 'Tersimpan di perangkat ' + jam();
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(r && r.ok === false) return;
+      $('saved').textContent = 'Tersimpan otomatis ' + jam();
+    })
+    .withFailureHandler(function(){ /* sinyal hilang: dicoba lagi pada siklus berikutnya */ })
+    .simpan(S.token, jawabAsli(), S.i);
+}
+// Begitu sinyal kembali, langsung simpan ke server.
+window.addEventListener('online', function(){
+  if(S && !sent){ autosave(); kirimAntrian(); }
+  else if(sent && !$('retry').hidden) kirimUlang();
+});
+
+function fmt(s){ var m = Math.floor(s / 60), d = s % 60; return (m < 10 ? '0' : '') + m + ':' + (d < 10 ? '0' : '') + d; }
+function tick(){
+  if(!S || sent) return;
+  var left = Math.max(0, Math.round((S.end - Date.now()) / 1000));
+  $('timer').textContent = fmt(left);
+  $('timer').className = left <= 300 ? 'low' : '';
+  if(left <= 0) selesai('waktu habis');
+}
+
+function render(){
+  var s = S.soal[S.i], n = S.soal.length;
+  $('qno').textContent = 'Soal ' + (S.i + 1) + ' dari ' + n;
+  $('qtext').textContent = s.teks;
+  var qi = $('qimg'); qi.hidden = !s.gambar; if(s.gambar) qi.src = s.gambar;
+  var box = $('opts'); box.innerHTML = '';
+  s.opsi.forEach(function(o, pos){
+    var huruf = String.fromCharCode(65 + pos);
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'opt' + (S.jawab[S.i] === o.k ? ' on' : '');
+    if(S.jawab[S.i]) b.disabled = true;   // sudah dijawab: tidak bisa diganti
+    var k = document.createElement('span'); k.className = 'k'; k.textContent = huruf; b.appendChild(k);
+    if(o.img){ var im = document.createElement('img'); im.src = o.img; im.alt = 'Opsi ' + huruf; b.appendChild(im); }
+    else { var t = document.createElement('span'); t.textContent = o.teks; b.appendChild(t); }
+    b.onclick = function(){ pilih(s, o.k); };
+    box.appendChild(b);
+  });
+  $('prog').textContent = 'Terjawab ' + S.jawab.filter(function(x){ return x; }).length + ' dari ' + n;
+  var g = $('grid'); g.innerHTML = '';
+  S.soal.forEach(function(_, idx){
+    var c = document.createElement('button');
+    c.type = 'button'; c.textContent = idx + 1;
+    c.className = (S.jawab[idx] ? 'done ' : '') + (idx === S.i ? 'cur' : '');
+    c.onclick = function(){ S.i = idx; render(); };
+    g.appendChild(c);
+  });
+  $('prev').disabled = S.i === 0;
+  $('next').hidden = S.i === n - 1;
+  $('send').hidden = S.i !== n - 1;
+  simpanLokal();   // setiap jawaban/pindah nomor langsung tersimpan di perangkat
+}
+function go(d){ S.i = Math.min(Math.max(S.i + d, 0), S.soal.length - 1); render(); window.scrollTo(0, 0); }
+
+// Konfirmasi manual memakai panel di halaman (bukan confirm() bawaan browser, agar tidak memicu auto-submit).
+function tanya(){
+  var kosong = S.jawab.filter(function(x){ return !x; }).length;
+  $('cText').textContent = kosong ? kosong + ' soal belum dijawab. Jawaban tidak bisa diubah setelah dikirim.' : 'Jawaban tidak bisa diubah setelah dikirim.';
+  $('confirm').hidden = false;
+}
+
+// Auto-submit saat peserta pindah tab / jendela / aplikasi.
+// Refresh TIDAK dianggap pindah tab: pengecekan ditunda sebentar (saat refresh halaman sudah hilang
+// sebelum pengecekan jalan), dan pagehide hanya menyimpan data.
+var pendingLeave = false;
+function leave(){ pendingLeave = false; if(armed && S && S.auto && !sent) selesai('pindah tab/jendela'); }
+document.addEventListener('visibilitychange', function(){
+  if(document.hidden){
+    pendingLeave = true;
+    setTimeout(function(){ if(pendingLeave) leave(); }, 700);
+  } else if(pendingLeave){
+    leave();   // timer sempat dibekukan browser (mis. pindah aplikasi di HP)
+  }
+});
+window.addEventListener('blur', function(){
+  setTimeout(function(){ if(!document.hasFocus()) leave(); }, 700);
+});
+window.addEventListener('pagehide', function(){ simpanLokal(); });
+
+function tampilKirim(alasan){
+  clearInterval(timerId); clearInterval(autoId);
+  window.onbeforeunload = null;
+  $('confirm').hidden = true;
+  $('timer').hidden = true;
+  $('doneTitle').textContent = 'Mengirim jawaban...';
+  $('doneWhy').textContent = alasan === 'waktu habis' ? 'Waktu pengerjaan habis.' :
+    alasan ? 'Anda meninggalkan halaman ujian, jawaban dikirim otomatis.' : '';
+  $('result').innerHTML = ''; $('sisa').textContent = '';
+  $('back').hidden = true; $('retry').hidden = true;
+  show('done');
+}
+
+function selesai(alasan){
+  if(sent) return;
+  sent = true; lastWhy = alasan; S.final = jawabAsli();
+  simpanLokal();   // tersimpan sebagai "menunggu terkirim": kalau gagal/refresh, akan dikirim ulang
+  tampilKirim(alasan);
+  kirim(alasan, 0);
+}
+
+function kirim(alasan, n){
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(!r.ok){
+        if(/sudah (dikirim|selesai|tersimpan)/i.test(r.msg || '')){   // server sudah punya jawabannya
+          hapusLokal();
+          $('doneTitle').textContent = 'Jawaban sudah tersimpan';
+          $('sisa').textContent = r.msg;
+          $('retry').hidden = true; $('back').hidden = false;
+          return;
+        }
+        gagal(r.msg, false);
+        $('back').hidden = false;   // supaya peserta tidak terjebak di layar ini
+        return;
+      }
+      hapusLokal();
+      $('doneTitle').textContent = 'Jawaban tersimpan';
+      var res = $('result'); res.innerHTML = '';
+      if(r.nilai !== undefined){
+        var d = document.createElement('div'); d.className = 'score'; d.textContent = r.nilai;
+        var p = document.createElement('p'); p.className = 'sub'; p.textContent = r.benar + ' benar dari ' + r.total + ' soal';
+        res.appendChild(d); res.appendChild(p);
+      }
+      $('sisa').textContent = r.sisaPercobaan > 0 ? 'Sisa kesempatan: ' + r.sisaPercobaan : 'Kesempatan mengerjakan sudah habis.';
+      $('retry').hidden = true;
+      $('back').hidden = false;
+    })
+    .withFailureHandler(function(e){
+      if(n < 3){ setTimeout(function(){ kirim(alasan, n + 1); }, 2000); return; }
+      gagal(e.message, true);
+    })
+    .submit(S.token, S.final, alasan);
+}
+function gagal(m, jaringan){
+  $('doneTitle').textContent = 'Jawaban belum terkirim';
+  $('sisa').textContent = (m || '') + ' Pastikan koneksi internet aktif, lalu tekan Kirim ulang.';
+  $('retry').hidden = false;
+  // Gangguan sinyal: coba kirim ulang otomatis tiap 15 detik sampai berhasil.
+  clearTimeout(retryId);
+  if(jaringan) retryId = setTimeout(kirimUlang, 15000);
+}
+function kirimUlang(){
+  clearTimeout(retryId);
+  $('retry').hidden = true; $('doneTitle').textContent = 'Mengirim jawaban...';
+  kirim(lastWhy, 0);
+}
+
+// ===== Pulihkan sesi saat halaman dibuka / di-refresh =====
+(function pulihkan(){
+  var raw = null, d = null;
+  if(/[?&]reset=1/.test(location.search)){ hapusLokal(); return; }   // jalan keluar: buka alamat?reset=1
+  try{ raw = localStorage.getItem(KEY); }catch(e){}
+  if(!raw) return;
+  try{ d = JSON.parse(raw); }catch(e){}
+  if(!d || !d.S || !d.S.token || !d.S.soal){ hapusLokal(); return; }
+  S = d.S;
+  if(d.sent){                       // sudah waktunya kirim tapi belum berhasil -> kirim ulang
+    sent = true; lastWhy = d.why || '';
+    if(!S.final) S.final = jawabAsli();
+    tampilKirim(lastWhy);
+    kirim(lastWhy, 0);
+    return;
+  }
+  if(S.end <= Date.now()){          // waktu habis selagi halaman tertutup -> kirim otomatis
+    selesai('waktu habis');
+    return;
+  }
+  mulai();                          // lanjut dari nomor terakhir
+})();
+
+// ===== Panel instructor & dashboard =====
+var AP = '', dashId = null, dashT = null;
+function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function aErr(m){ $('aErr').textContent = m || ''; }
+function aCall(fn, args, ok){ google.script.run.withSuccessHandler(ok).withFailureHandler(function(e){ aErr(e.message); alert(e.message); })[fn].apply(null, [AP].concat(args)); }
+function aLogin(){
+  AP = $('apw').value; aErr('');
+  google.script.run.withSuccessHandler(function(k){
+    $('aLogin').hidden = true; $('aMain').hidden = false;
+    $('aKat').innerHTML = k.map(function(x){ return '<option value="' + esc(x.kat) + '">' + esc(x.kat) + ' (' + x.n + ' soal)' + (x.bad ? ' - ' + x.bad + ' kunci belum valid' : '') + '</option>'; }).join('');
+    aDaftar();
+  }).withFailureHandler(function(e){ aErr(e.message); }).adm_kategori(AP);
+}
+function aBuat(){
+  var d = { kat: $('aKat').value, jenis: $('aJenis').value, mode: $('aMode').value, dur: $('aDur').value,
+            mulai: Date.parse($('aMulai').value), selesai: Date.parse($('aSelesai').value) };
+  if(!(d.dur > 0)){ alert('Isi durasi.'); return; }
+  if(d.mode !== 'live' && !(d.mulai && d.selesai && d.selesai > d.mulai)){ alert('Isi jadwal dibuka dan ditutup dengan benar.'); return; }
+  aCall('adm_buat', [d], function(r){ aDaftar(); aBuka(r.id); });
+}
+function aDaftar(){
+  aCall('adm_daftar', [], function(l){
+    $('aList').innerHTML = l.length ? '<table class="tbl"><tr><th>Sesi</th><th>Status</th><th>Peserta</th><th></th></tr>' + l.map(function(s){
+      return '<tr><td><b>' + esc(s.jenis) + '</b> &middot; Kode <b>' + esc(s.kode) + '</b><br>' + esc(s.kat) + '<br><small>' + (s.mode === 'live' ? 'Live ' + s.dur + ' menit' : 'Terjadwal ' + new Date(s.mulai).toLocaleString('id-ID') + ' - ' + new Date(s.selesai).toLocaleString('id-ID')) + '</small></td>' +
+        '<td><span class="badge ' + s.state + '">' + s.state + '</span></td><td>' + s.fin + '/' + s.peserta + ' selesai</td><td>' +
+        '<button class="btn alt sm" onclick="aBuka(\'' + s.id + '\')">Dashboard</button>' +
+        (s.mode === 'live' && s.state === 'menunggu' ? '<button class="btn go sm" onclick="aMulai(\'' + s.id + '\')">Mulai</button>' : '') +
+        (s.state !== 'selesai' || s.fin < s.peserta ? '<button class="btn sm" style="background:var(--bad)" onclick="aAkhiri(\'' + s.id + '\')">Akhiri</button>' : '') + '</td></tr>';
+    }).join('') + '</table>' : '<p class="sub">Belum ada sesi.</p>';
+  });
+}
+function aMulai(id){ if(confirm('Mulai tes sekarang untuk semua peserta?')) aCall('adm_mulai', [id], function(){ aDaftar(); aBuka(id); }); }
+function aAkhiri(id){ if(confirm('Akhiri sesi dan nilai semua jawaban yang belum dikirim?')) aCall('adm_akhiri', [id], function(r){ alert(r.dinilai + ' peserta dinilai otomatis.'); aDaftar(); aRefresh(); }); }
+function aBuka(id){ dashId = id; $('aDash').hidden = false; clearInterval(dashT); aRefresh(); dashT = setInterval(aRefresh, 4000); $('aDash').scrollIntoView(); }
+function aRefresh(){
+  if(!dashId) return;
+  google.script.run.withSuccessHandler(function(d){
+    var ps = d.ps, fin = ps.filter(function(p){ return p.selesai; }).length;
+    var rata = ps.length ? Math.round(ps.reduce(function(a, p){ return a + p.nilai; }, 0) / ps.length) : 0;
+    var medal = ['🥇', '🥈', '🥉'];
+    var lobi = ps.filter(function(p){ return p.lobi; }).length, link = location.origin + location.pathname + '?kode=' + d.sesi.kode;
+    var h = '<h1 style="font-size:19px">' + esc(d.sesi.jenis) + ' - ' + esc(d.sesi.kat) + ' <span class="badge ' + d.sesi.state + '">' + d.sesi.state + '</span></h1>' +
+      '<div class="kode">' + esc(d.sesi.kode) + '</div><p class="sub" style="text-align:center">Kode gabung. Atau bagikan tautan: <small>' + esc(link) + '</small></p>' +
+      '<p style="text-align:center">' + (d.sesi.mode === 'live' && d.sesi.state === 'menunggu' ? '<button class="btn go" onclick="aMulai(\'' + d.sesi.id + '\')">Mulai tes sekarang</button> ' : '') +
+      (d.sesi.state !== 'selesai' || ps.some(function(p){ return !p.selesai; }) ? '<button class="btn" style="background:var(--bad)" onclick="aAkhiri(\'' + d.sesi.id + '\')">Akhiri sesi</button>' : '') + '</p>' +
+      '<p class="sub">Bergabung ' + ps.length + (lobi ? ' (di lobi ' + lobi + ')' : '') + ' | Selesai ' + fin + ' | Rata-rata nilai ' + rata + ' | diperbarui otomatis tiap 4 detik</p>';
+    h += '<div class="pod">' + ps.slice(0, 3).map(function(p, i){ return '<div>' + medal[i] + '<b>' + p.nilai + '</b>' + esc(p.nama) + '</div>'; }).join('') + '</div>';
+    h += '<table class="tbl"><tr><th>#</th><th>Nama</th><th>Progres</th><th>Benar</th><th>Nilai</th></tr>' + ps.map(function(p, i){
+      return '<tr><td>' + (i + 1) + '</td><td>' + esc(p.nama) + '<br><small>' + (p.lobi ? 'di lobi' : '') + (p.selesai ? ' ✓' : '') + '</small></td><td><div class="bar"><i style="width:' + Math.round(p.jawab / d.sesi.n * 100) + '%"></i></div><small>' + p.jawab + '/' + d.sesi.n + '</small></td><td>' + p.benar + '</td><td><b>' + p.nilai + '</b></td></tr>';
+    }).join('') + '</table>';
+    h += '<h1 style="font-size:17px;margin-top:22px">Ketepatan per soal</h1><table class="tbl">' + d.soal.map(function(q){
+      var pc = q.jawab ? Math.round(q.benar / q.jawab * 100) : 0;
+      return '<tr><td>' + q.no + '</td><td>' + esc(q.teks) + '</td><td><div class="bar ' + (pc < 50 ? 'r' : 'g') + '"><i style="width:' + pc + '%"></i></div></td><td>' + pc + '%</td></tr>';
+    }).join('') + '</table><p style="margin:16px 0 0"><button class="btn alt" onclick="aBanding(\'' + esc(d.sesi.kat).replace(/'/g, "\\'") + '\')">Bandingkan Pre vs Post</button></p><div id="aBand"></div>';
+    $('aDash').innerHTML = h;
+  }).withFailureHandler(function(){}).adm_dash(AP, dashId);
+}
+function aBanding(kat){
+  aCall('adm_banding', [kat], function(l){
+    $('aBand').innerHTML = '<table class="tbl" style="margin-top:12px"><tr><th>Nama</th><th>Pre</th><th>Post</th><th>Selisih</th></tr>' + l.map(function(r){
+      var sel = (r.pre != null && r.post != null) ? r.post - r.pre : null;
+      return '<tr><td>' + esc(r.nama) + '</td><td>' + (r.pre == null ? '-' : r.pre) + '</td><td>' + (r.post == null ? '-' : r.post) + '</td><td><b style="color:' + (sel > 0 ? 'var(--ok)' : sel < 0 ? 'var(--bad)' : 'inherit') + '">' + (sel == null ? '-' : (sel > 0 ? '+' : '') + sel) + '</b></td></tr>';
+    }).join('') + '</table>';
+  });
+}
+if(/[?&]admin/.test(location.search) && !S) show('admin');
+(function(){ var m = /[?&]kode=(\d+)/.exec(location.search); if(m) $('pw').value = m[1]; })();   // tautan dengan kode terisi otomatis
+</script>
+</body>
+</html>
