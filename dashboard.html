@@ -40,15 +40,6 @@ input{width:100%;padding:12px;font-size:16px;border-radius:8px;border:1px solid 
 </style>
 </head>
 <body>
-<div class="gate" id="gate" hidden>
-  <h1>Dashboard Live</h1>
-  <p class="sub">Masukkan password instructor, lalu pilih sesi.</p>
-  <input id="pw" type="password" placeholder="Password instructor" autocomplete="off">
-  <div class="err" id="gerr"></div>
-  <button onclick="masuk()">Lanjut</button>
-  <div id="sessList"></div>
-</div>
-
 <div id="live" hidden>
   <div class="top">
     <div><div class="title"><span id="jdl"></span><span class="badge" id="bdg"></span></div><div class="sub" id="sub"></div></div>
@@ -56,6 +47,7 @@ input{width:100%;padding:12px;font-size:16px;border-radius:8px;border:1px solid 
     <div style="text-align:right"><div class="timer" id="tmr">--:--</div><div class="ctl" style="justify-content:flex-end">
       <button class="go" id="bMulai" onclick="mulai()" hidden>Mulai tes</button>
       <button class="stop" id="bAkhir" onclick="akhiri()" hidden>Akhiri</button>
+      <button class="alt" onclick="tutup()">✕ Tutup, kembali ke panel instructor</button>
       <button class="alt" onclick="document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen()">Layar penuh</button></div></div>
   </div>
   <div class="stats">
@@ -76,9 +68,9 @@ input{width:100%;padding:12px;font-size:16px;border-radius:8px;border:1px solid 
 </div>
 
 <script>
-var API_URL = 'https://script.google.com/macros/s/AKfycbwBr5xYb1XCQlicrQ0-jRuALNttqJ0jJjDmoVkS1xvlz8uGQvugQ3qbwJ4DtK4IKcu6/exec';
+var API_URL = 'https://script.google.com/macros/s/AKfycbw22BTvYLDf7iFQCXZWpkpDzY8XZzJt7nSFYJXv9YOrE_es8_3P3B7het7-fTBVabMK/exec';
 var PW = '', ID = '', rows = {}, D = null, started = false;
-try{ PW = sessionStorage.getItem('inst_pw') || ''; }catch(e){}
+try{ PW = localStorage.getItem('inst_tok') || ''; }catch(e){}   // token dari login panel instructor
 var m = /[?&]id=(\w+)/.exec(location.search); ID = m ? m[1] : '';
 function $(i){ return document.getElementById(i); }
 function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
@@ -86,26 +78,21 @@ function call(fn, args){
   return fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: fn, args: args }) })
     .then(function(r){ return r.json(); }).then(function(j){ if(j.error) throw new Error(j.error); return j.result; });
 }
-function gate(msg){ $('live').hidden = true; $('gate').hidden = false; $('gerr').textContent = msg || ''; }
-function masuk(){
-  PW = $('pw').value || PW; $('gerr').textContent = 'Memeriksa...';
-  call('adm_daftar', [PW]).then(function(l){
-    try{ sessionStorage.setItem('inst_pw', PW); }catch(e){}
-    $('gerr').textContent = '';
-    if(ID){ start(); return; }
-    $('sessList').innerHTML = l.map(function(s){ return '<button class="sess" onclick="pilih(\'' + s.id + '\')">' + esc(s.jenis) + ' - ' + esc(s.kat) + ' &middot; Kode ' + esc(s.kode) + ' &middot; ' + s.state + '</button>'; }).join('') || '<p class="sub">Belum ada sesi.</p>';
-  }).catch(function(e){ gate(e.message); });
+function keluar(){ location.replace('./?' + (ID ? 'live=' + ID : 'admin')); }   // belum login: ke panel instructor, lalu kembali ke sini
+function tutup(){   // keluar dari layar penuh (kalau aktif) lalu kembali ke panel instructor
+  try{ if(document.fullscreenElement) document.exitFullscreen(); }catch(e){}
+  location.href = './?admin';
 }
-function pilih(id){ ID = id; history.replaceState(null, '', '?id=' + id); start(); }
+document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && !document.fullscreenElement && !$('live').hidden) tutup(); });
 function start(){
-  $('gate').hidden = true; $('live').hidden = false;
+  $('live').hidden = false;
   if(started) return; started = true;
   poll(); setInterval(poll, 3000); setInterval(tick, 1000);
 }
 function poll(){
   call('adm_dash', [PW, ID]).then(function(d){ $('warn').textContent = ''; render(d); })
     .catch(function(e){
-      if(/password/i.test(e.message)){ try{ sessionStorage.removeItem('inst_pw'); }catch(x){} started = false; gate(e.message); return; }
+      if(/password/i.test(e.message)){ try{ localStorage.removeItem('inst_tok'); }catch(x){} keluar(); return; }
       $('warn').textContent = 'Koneksi bermasalah, mencoba lagi...';
     });
 }
@@ -151,7 +138,7 @@ function render(d){
     return '<div class="it"><div class="row"><span>No. ' + h.q.no + (h.q.topik ? ' &middot; ' + esc(h.q.topik) : '') + '</span><b>' + h.pc + '%</b></div><div class="bar ' + (h.pc < 50 ? 'r2' : '') + '"><i style="width:' + h.pc + '%"></i></div></div>'; }).join('');
   tick();
 }
-if(PW && ID) start(); else if(PW) masuk(); else gate('');
+if(PW && ID) start(); else keluar();
 </script>
 </body>
 </html>
