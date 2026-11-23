@@ -133,8 +133,8 @@ input.bad{border-color:var(--bad)}
         <div class="row2" id="aJad" hidden><div><label>Dibuka</label><input id="aMulai" type="datetime-local"></div><div><label>Ditutup</label><input id="aSelesai" type="datetime-local"></div></div>
         <p style="margin:16px 0 0"><button class="btn" onclick="aBuat()">Buat sesi</button></p>
       </div>
-      <div class="card" style="margin-bottom:16px"><h1 style="font-size:19px">Daftar sesi</h1><div id="aList"></div></div>
-      <div class="card" id="aDash" hidden></div>
+      <div class="card" id="aNew" hidden style="margin-bottom:16px"></div>
+      <div class="card" style="margin-bottom:16px"><h1 style="font-size:19px">Daftar sesi</h1><div id="aList"></div><div id="aBand"></div></div>
     </div>
   </section>
 
@@ -517,7 +517,7 @@ function kirimUlang(){
 })();
 
 // ===== Panel instructor & dashboard =====
-var AP = '', dashId = null, dashT = null;
+var AP = '', aL = [];
 function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 function aErr(m){ $('aErr').textContent = m || ''; }
 function aCall(fn, args, ok){ google.script.run.withSuccessHandler(ok).withFailureHandler(function(e){ aErr(e.message); alert(e.message); })[fn].apply(null, [AP].concat(args)); }
@@ -535,54 +535,32 @@ function aBuat(){
             mulai: Date.parse($('aMulai').value), selesai: Date.parse($('aSelesai').value) };
   if(!(d.dur > 0)){ alert('Isi durasi.'); return; }
   if(d.mode !== 'live' && !(d.mulai && d.selesai && d.selesai > d.mulai)){ alert('Isi jadwal dibuka dan ditutup dengan benar.'); return; }
-  aCall('adm_buat', [d], function(r){ aDaftar(); aBuka(r.id); });
+  aCall('adm_buat', [d], function(r){
+    aDaftar();
+    var link = location.origin + location.pathname + '?kode=' + r.kode, b = $('aNew'); b.hidden = false;
+    b.innerHTML = '<div class="kode">' + esc(r.kode) + '</div><p class="sub" style="text-align:center">Kode gabung. Tautan peserta: <small>' + esc(link) + '</small></p><p style="text-align:center">' +
+      '<button class="btn alt" onclick="location.href=\'dashboard.html?id=' + r.id + '\'">Buka layar live</button> ' +
+      (d.mode === 'live' ? '<button class="btn go" onclick="aMulai(\'' + r.id + '\')">Mulai tes sekarang</button>' : '') + '</p>';
+    b.scrollIntoView();
+  });
 }
 function aDaftar(){
   aCall('adm_daftar', [], function(l){
-    $('aList').innerHTML = l.length ? '<table class="tbl"><tr><th>Sesi</th><th>Status</th><th>Peserta</th><th></th></tr>' + l.map(function(s){
+    $('aList').innerHTML = l.length ? '<table class="tbl"><tr><th>Sesi</th><th>Status</th><th>Peserta</th><th></th></tr>' + (aL = l).map(function(s, i){
       return '<tr><td><b>' + esc(s.jenis) + '</b> &middot; Kode <b>' + esc(s.kode) + '</b><br>' + esc(s.kat) + '<br><small>' + (s.mode === 'live' ? 'Live ' + s.dur + ' menit' : 'Terjadwal ' + new Date(s.mulai).toLocaleString('id-ID') + ' - ' + new Date(s.selesai).toLocaleString('id-ID')) + '</small></td>' +
         '<td><span class="badge ' + s.state + '">' + s.state + '</span></td><td>' + s.fin + '/' + s.peserta + ' selesai</td><td>' +
-        '<button class="btn alt sm" onclick="aBuka(\'' + s.id + '\')">Dashboard</button>' +
+        '<button class="btn alt sm" onclick="location.href=\'dashboard.html?id=' + s.id + '\'">Layar live</button>' +
+        '<button class="btn alt sm" onclick="aBanding(aL[' + i + '].kat)">Pre vs Post</button>' +
         (s.mode === 'live' && s.state === 'menunggu' ? '<button class="btn go sm" onclick="aMulai(\'' + s.id + '\')">Mulai</button>' : '') +
         (s.state !== 'selesai' || s.fin < s.peserta ? '<button class="btn sm" style="background:var(--bad)" onclick="aAkhiri(\'' + s.id + '\')">Akhiri</button>' : '') + '</td></tr>';
     }).join('') + '</table>' : '<p class="sub">Belum ada sesi.</p>';
   });
 }
-function aMulai(id){ if(confirm('Mulai tes sekarang untuk semua peserta?')) aCall('adm_mulai', [id], function(){ aDaftar(); aBuka(id); }); }
-function aAkhiri(id){ if(confirm('Akhiri sesi dan nilai semua jawaban yang belum dikirim?')) aCall('adm_akhiri', [id], function(r){ alert(r.dinilai + ' peserta dinilai otomatis.'); aDaftar(); aRefresh(); }); }
-function aBuka(id){ dashId = id; $('aDash').hidden = false; clearInterval(dashT); aRefresh(); dashT = setInterval(aRefresh, 4000); $('aDash').scrollIntoView(); }
-function aRefresh(){
-  if(!dashId) return;
-  google.script.run.withSuccessHandler(function(d){
-    var ps = d.ps, fin = ps.filter(function(p){ return p.selesai; }).length;
-    var rata = ps.length ? Math.round(ps.reduce(function(a, p){ return a + p.nilai; }, 0) / ps.length) : 0;
-    var medal = ['🥇', '🥈', '🥉'];
-    var lobi = ps.filter(function(p){ return p.lobi; }).length, link = location.origin + location.pathname + '?kode=' + d.sesi.kode;
-    var h = '<h1 style="font-size:19px">' + esc(d.sesi.jenis) + ' - ' + esc(d.sesi.kat) + ' <span class="badge ' + d.sesi.state + '">' + d.sesi.state + '</span></h1>' +
-      '<div class="kode">' + esc(d.sesi.kode) + '</div><p class="sub" style="text-align:center">Kode gabung. Atau bagikan tautan: <small>' + esc(link) + '</small></p>' +
-      '<p style="text-align:center"><button class="btn alt" onclick="window.open(\'dashboard.html?id=' + d.sesi.id + '\')">Buka layar live</button> ' + (d.sesi.mode === 'live' && d.sesi.state === 'menunggu' ? '<button class="btn go" onclick="aMulai(\'' + d.sesi.id + '\')">Mulai tes sekarang</button> ' : '') +
-      (d.sesi.state !== 'selesai' || ps.some(function(p){ return !p.selesai; }) ? '<button class="btn" style="background:var(--bad)" onclick="aAkhiri(\'' + d.sesi.id + '\')">Akhiri sesi</button>' : '') + '</p>' +
-      '<p class="sub">Bergabung ' + ps.length + (lobi ? ' (di lobi ' + lobi + ')' : '') + ' | Selesai ' + fin + ' | Rata-rata nilai ' + rata + ' | diperbarui otomatis tiap 4 detik</p>';
-    h += '<div class="pod">' + ps.slice(0, 3).map(function(p, i){ return '<div>' + medal[i] + '<b>' + p.nilai + '</b>' + esc(p.nama) + '</div>'; }).join('') + '</div>';
-    h += '<table class="tbl"><tr><th>#</th><th>Nama</th><th>Progres</th><th>Benar</th><th>Nilai</th></tr>' + ps.map(function(p, i){
-      return '<tr><td>' + (i + 1) + '</td><td>' + esc(p.nama) + '<br><small>' + (p.lobi ? 'di lobi' : '') + (p.selesai ? ' ✓' : '') + '</small></td><td><div class="bar"><i style="width:' + Math.round(p.jawab / d.sesi.n * 100) + '%"></i></div><small>' + p.jawab + '/' + d.sesi.n + '</small></td><td>' + p.benar + '</td><td><b>' + p.nilai + '</b></td></tr>';
-    }).join('') + '</table>';
-    if(d.topik && (d.topik.length > 1 || d.topik[0].nama !== 'Umum')){
-      h += '<h1 style="font-size:17px;margin-top:22px">Ketepatan per topik</h1><table class="tbl">' + d.topik.map(function(t){
-        var pc = t.jawab ? Math.round(t.benar / t.jawab * 100) : 0;
-        return '<tr><td>' + esc(t.nama) + '<br><small>' + t.soal + ' soal</small></td><td><div class="bar ' + (pc < 50 ? 'r' : 'g') + '"><i style="width:' + pc + '%"></i></div></td><td><b>' + pc + '%</b></td></tr>';
-      }).join('') + '</table>';
-    }
-    h += '<h1 style="font-size:17px;margin-top:22px">Ketepatan per soal</h1><table class="tbl">' + d.soal.map(function(q){
-      var pc = q.jawab ? Math.round(q.benar / q.jawab * 100) : 0;
-      return '<tr><td>' + q.no + '</td><td>' + esc(q.teks) + (q.topik ? '<br><small>' + esc(q.topik) + '</small>' : '') + '</td><td><div class="bar ' + (pc < 50 ? 'r' : 'g') + '"><i style="width:' + pc + '%"></i></div></td><td>' + pc + '%</td></tr>';
-    }).join('') + '</table><p style="margin:16px 0 0"><button class="btn alt" onclick="aBanding(\'' + esc(d.sesi.kat).replace(/'/g, "\\'") + '\')">Bandingkan Pre vs Post</button></p><div id="aBand"></div>';
-    $('aDash').innerHTML = h;
-  }).withFailureHandler(function(){}).adm_dash(AP, dashId);
-}
+function aMulai(id){ if(confirm('Mulai tes sekarang untuk semua peserta?')) aCall('adm_mulai', [id], function(){ location.href = 'dashboard.html?id=' + id; }); }   // langsung ke layar live
+function aAkhiri(id){ if(confirm('Akhiri sesi dan nilai semua jawaban yang belum dikirim?')) aCall('adm_akhiri', [id], function(r){ alert(r.dinilai + ' peserta dinilai otomatis.'); aDaftar(); }); }
 function aBanding(kat){
   aCall('adm_banding', [kat], function(l){
-    $('aBand').innerHTML = '<table class="tbl" style="margin-top:12px"><tr><th>Nama</th><th>Pre</th><th>Post</th><th>Selisih</th></tr>' + l.map(function(r){
+    $('aBand').innerHTML = '<h1 style="font-size:17px;margin-top:18px">Pre vs Post - ' + esc(kat) + '</h1><table class="tbl" style="margin-top:12px"><tr><th>Nama</th><th>Pre</th><th>Post</th><th>Selisih</th></tr>' + l.map(function(r){
       var sel = (r.pre != null && r.post != null) ? r.post - r.pre : null;
       return '<tr><td>' + esc(r.nama) + '</td><td>' + (r.pre == null ? '-' : r.pre) + '</td><td>' + (r.post == null ? '-' : r.post) + '</td><td><b style="color:' + (sel > 0 ? 'var(--ok)' : sel < 0 ? 'var(--bad)' : 'inherit') + '">' + (sel == null ? '-' : (sel > 0 ? '+' : '') + sel) + '</b></td></tr>';
     }).join('') + '</table>';
