@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard Live</title>
+<style>
+:root{--bg:#0a1a33;--card:#12294d;--line:#25406b;--ink:#f1f5fb;--mute:#9db0cc;--blue:#4f9bff;--ok:#33c27a;--bad:#ff6b5e;--gold:#ffc83d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,sans-serif}
+[hidden]{display:none!important}
+button{font:inherit;cursor:pointer;border:0;border-radius:8px;padding:10px 18px;font-weight:600;color:#fff;background:var(--blue)}
+button.go{background:var(--ok)} button.stop{background:var(--bad)} button.alt{background:#1d3a66}
+input{width:100%;padding:12px;font-size:16px;border-radius:8px;border:1px solid var(--line);background:#0d2140;color:var(--ink)}
+.gate{max-width:440px;margin:12vh auto;background:var(--card);padding:28px;border-radius:12px}
+.gate h1{margin:0 0 14px}.gate .sess{display:block;width:100%;text-align:left;margin-top:8px;background:#1d3a66}
+.err{color:var(--bad);min-height:22px;margin:8px 0}
+.top{display:flex;gap:24px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:18px 28px;background:var(--card);border-bottom:1px solid var(--line)}
+.title{font-size:22px;font-weight:700}.sub{color:var(--mute);font-size:14px}
+.kode{font-size:56px;font-weight:800;letter-spacing:10px;color:var(--gold);line-height:1}
+.timer{font-size:44px;font-weight:800;font-variant-numeric:tabular-nums}
+.badge{display:inline-block;padding:3px 12px;border-radius:14px;font-size:13px;font-weight:700;background:#1d3a66;margin-left:8px;text-transform:uppercase}
+.badge.berjalan{background:var(--ok)}.badge.selesai{background:#555}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:18px 28px 0}
+.stat{background:var(--card);border-radius:12px;padding:14px 18px}.stat b{display:block;font-size:34px}.stat span{color:var(--mute);font-size:14px}
+.main{display:grid;grid-template-columns:2fr 1fr;gap:18px;padding:18px 28px 28px}
+@media(max-width:900px){.main{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.kode{font-size:40px}}
+.panel{background:var(--card);border-radius:12px;padding:18px}.panel h2{margin:0 0 12px;font-size:17px;color:var(--mute);font-weight:600}
+#board{display:flex;flex-direction:column;gap:8px}
+.r{display:grid;grid-template-columns:44px 1.2fr 2fr 70px;gap:12px;align-items:center;background:#0d2140;border-radius:10px;padding:10px 14px;font-size:20px}
+.r .rk{font-weight:800;text-align:center}.r .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.r .pb{height:14px;background:#1d3a66;border-radius:7px;overflow:hidden}.r .pb i{display:block;height:100%;width:0;background:var(--blue);transition:width .8s}
+.r.fin .pb i{background:var(--ok)}.r .sc{text-align:right;font-weight:800}
+.r:nth-child(1){border:2px solid var(--gold)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}.chip{background:#1d3a66;border-radius:16px;padding:6px 14px;font-size:16px}
+.bar{height:10px;background:#1d3a66;border-radius:5px;overflow:hidden}.bar i{display:block;height:100%;background:var(--ok)}.bar.r2 i{background:var(--bad)}
+.it{margin-bottom:12px;font-size:15px}.it .row{display:flex;justify-content:space-between;gap:10px;margin-bottom:4px}
+.ctl{display:flex;gap:10px;flex-wrap:wrap}
+#warn{color:var(--gold);font-size:13px}
+</style>
+</head>
+<body>
+<div class="gate" id="gate" hidden>
+  <h1>Dashboard Live</h1>
+  <p class="sub">Masukkan password instructor, lalu pilih sesi.</p>
+  <input id="pw" type="password" placeholder="Password instructor" autocomplete="off">
+  <div class="err" id="gerr"></div>
+  <button onclick="masuk()">Lanjut</button>
+  <div id="sessList"></div>
+</div>
+
+<div id="live" hidden>
+  <div class="top">
+    <div><div class="title"><span id="jdl"></span><span class="badge" id="bdg"></span></div><div class="sub" id="sub"></div></div>
+    <div style="text-align:center"><div class="sub">KODE GABUNG</div><div class="kode" id="kode"></div></div>
+    <div style="text-align:right"><div class="timer" id="tmr">--:--</div><div class="ctl" style="justify-content:flex-end">
+      <button class="go" id="bMulai" onclick="mulai()" hidden>Mulai tes</button>
+      <button class="stop" id="bAkhir" onclick="akhiri()" hidden>Akhiri</button>
+      <button class="alt" onclick="document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen()">Layar penuh</button></div></div>
+  </div>
+  <div class="stats">
+    <div class="stat"><b id="sJoin">0</b><span>Bergabung</span></div>
+    <div class="stat"><b id="sRun">0</b><span>Sedang mengerjakan</span></div>
+    <div class="stat"><b id="sFin">0</b><span>Selesai</span></div>
+    <div class="stat"><b id="sAvg">0</b><span>Rata-rata nilai</span></div>
+  </div>
+  <div class="main">
+    <div class="panel"><h2 id="bTitle">Peringkat</h2><div id="board"></div><div class="sub" id="more" style="margin-top:10px"></div>
+      <div id="lobby" hidden><h2>Di lobi</h2><div class="chips" id="chips"></div></div></div>
+    <div>
+      <div class="panel" id="pTopik" hidden style="margin-bottom:18px"><h2>Ketepatan per topik</h2><div id="topik"></div></div>
+      <div class="panel"><h2>Soal tersulit</h2><div id="hard"><span class="sub">Menunggu jawaban masuk...</span></div></div>
+      <p id="warn"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+var API_URL = 'https://script.google.com/macros/s/AKfycbwBr5xYb1XCQlicrQ0-jRuALNttqJ0jJjDmoVkS1xvlz8uGQvugQ3qbwJ4DtK4IKcu6/exec';
+var PW = '', ID = '', rows = {}, D = null, started = false;
+try{ PW = sessionStorage.getItem('inst_pw') || ''; }catch(e){}
+var m = /[?&]id=(\w+)/.exec(location.search); ID = m ? m[1] : '';
+function $(i){ return document.getElementById(i); }
+function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function call(fn, args){
+  return fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: fn, args: args }) })
+    .then(function(r){ return r.json(); }).then(function(j){ if(j.error) throw new Error(j.error); return j.result; });
+}
+function gate(msg){ $('live').hidden = true; $('gate').hidden = false; $('gerr').textContent = msg || ''; }
+function masuk(){
+  PW = $('pw').value || PW; $('gerr').textContent = 'Memeriksa...';
+  call('adm_daftar', [PW]).then(function(l){
+    try{ sessionStorage.setItem('inst_pw', PW); }catch(e){}
+    $('gerr').textContent = '';
+    if(ID){ start(); return; }
+    $('sessList').innerHTML = l.map(function(s){ return '<button class="sess" onclick="pilih(\'' + s.id + '\')">' + esc(s.jenis) + ' - ' + esc(s.kat) + ' &middot; Kode ' + esc(s.kode) + ' &middot; ' + s.state + '</button>'; }).join('') || '<p class="sub">Belum ada sesi.</p>';
+  }).catch(function(e){ gate(e.message); });
+}
+function pilih(id){ ID = id; history.replaceState(null, '', '?id=' + id); start(); }
+function start(){
+  $('gate').hidden = true; $('live').hidden = false;
+  if(started) return; started = true;
+  poll(); setInterval(poll, 3000); setInterval(tick, 1000);
+}
+function poll(){
+  call('adm_dash', [PW, ID]).then(function(d){ $('warn').textContent = ''; render(d); })
+    .catch(function(e){
+      if(/password/i.test(e.message)){ try{ sessionStorage.removeItem('inst_pw'); }catch(x){} started = false; gate(e.message); return; }
+      $('warn').textContent = 'Koneksi bermasalah, mencoba lagi...';
+    });
+}
+function fmt(s){ var h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), d = s % 60, p = function(n){ return (n < 10 ? '0' : '') + n; }; return (h ? h + ':' : '') + p(m) + ':' + p(d); }
+function tick(){
+  if(!D) return; var s = D.sesi, t = $('tmr');
+  if(s.state === 'menunggu'){ t.textContent = s.mode === 'live' ? 'Menunggu' : new Date(s.mulai).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' }); }
+  else if(s.state === 'berjalan'){ var left = Math.max(0, Math.round((s.selesai - Date.now()) / 1000)); t.textContent = fmt(left); t.style.color = left <= 60 ? 'var(--bad)' : ''; }
+  else t.textContent = 'Selesai';
+}
+function mulai(){ if(confirm('Mulai tes sekarang untuk semua peserta?')) call('adm_mulai', [PW, ID]).then(poll).catch(function(e){ alert(e.message); }); }
+function akhiri(){ if(confirm('Akhiri sesi dan nilai semua jawaban yang belum dikirim?')) call('adm_akhiri', [PW, ID]).then(function(r){ alert(r.dinilai + ' peserta dinilai otomatis.'); poll(); }).catch(function(e){ alert(e.message); }); }
+function render(d){
+  D = d; var s = d.sesi, ps = d.ps, n = s.n;
+  $('jdl').textContent = s.jenis + ' - ' + s.kat; $('bdg').textContent = s.state; $('bdg').className = 'badge ' + s.state;
+  $('sub').textContent = n + ' soal'; $('kode').textContent = s.kode;
+  $('bMulai').hidden = !(s.mode === 'live' && s.state === 'menunggu');
+  $('bAkhir').hidden = s.state === 'selesai' && ps.every(function(p){ return p.selesai; });
+  var lobi = ps.filter(function(p){ return p.lobi; }), aktif = ps.filter(function(p){ return !p.lobi; });
+  var fin = ps.filter(function(p){ return p.selesai; }).length;
+  var avg = aktif.length ? Math.round(aktif.reduce(function(a, p){ return a + p.nilai; }, 0) / aktif.length) : 0;
+  $('sJoin').textContent = ps.length; $('sRun').textContent = aktif.length - fin; $('sFin').textContent = fin; $('sAvg').textContent = avg;
+  $('bTitle').textContent = s.state === 'selesai' ? '🏆 Hasil akhir' : 'Peringkat';
+  // papan peringkat: baris dipertahankan agar bar bergerak halus
+  var top = aktif.slice(0, 10), keep = {}, medal = ['🥇', '🥈', '🥉'], board = $('board');
+  top.forEach(function(p, i){
+    var el = rows[p.nama];
+    if(!el){ el = document.createElement('div'); el.className = 'r'; el.innerHTML = '<div class="rk"></div><div class="nm"></div><div class="pb"><i></i></div><div class="sc"></div>'; board.appendChild(el); rows[p.nama] = el; }
+    keep[p.nama] = 1; el.style.order = i; el.classList.toggle('fin', p.selesai);
+    el.children[0].textContent = medal[i] || (i + 1); el.children[1].textContent = p.nama;
+    el.children[2].firstChild.style.width = Math.round(p.jawab / n * 100) + '%'; el.children[3].textContent = p.nilai;
+  });
+  Object.keys(rows).forEach(function(k){ if(!keep[k]){ rows[k].remove(); delete rows[k]; } });
+  $('more').textContent = aktif.length > 10 ? 'dan ' + (aktif.length - 10) + ' peserta lainnya' : '';
+  $('lobby').hidden = !lobi.length; $('chips').innerHTML = lobi.map(function(p){ return '<span class="chip">' + esc(p.nama) + '</span>'; }).join('');
+  var tp = d.topik || [];
+  $('pTopik').hidden = !(tp.length > 1 || (tp[0] && tp[0].nama !== 'Umum'));
+  $('topik').innerHTML = tp.map(function(t){ var pc = t.jawab ? Math.round(t.benar / t.jawab * 100) : 0;
+    return '<div class="it"><div class="row"><span>' + esc(t.nama) + '</span><b>' + pc + '%</b></div><div class="bar ' + (pc < 50 ? 'r2' : '') + '"><i style="width:' + pc + '%"></i></div></div>'; }).join('');
+  var hard = d.soal.filter(function(q){ return q.jawab > 0; }).map(function(q){ return { q: q, pc: Math.round(q.benar / q.jawab * 100) }; })
+    .sort(function(a, b){ return a.pc - b.pc; }).slice(0, 5);
+  if(hard.length) $('hard').innerHTML = hard.map(function(h){
+    return '<div class="it"><div class="row"><span>No. ' + h.q.no + (h.q.topik ? ' &middot; ' + esc(h.q.topik) : '') + '</span><b>' + h.pc + '%</b></div><div class="bar ' + (h.pc < 50 ? 'r2' : '') + '"><i style="width:' + h.pc + '%"></i></div></div>'; }).join('');
+  tick();
+}
+if(PW && ID) start(); else if(PW) masuk(); else gate('');
+</script>
+</body>
+</html>
