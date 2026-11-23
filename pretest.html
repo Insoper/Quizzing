@@ -217,8 +217,9 @@ function togglePw(){
 });
 
 // ===== Penyimpanan lokal (bertahan saat refresh) =====
+var tuntas = false;   // true setelah server mengonfirmasi jawaban: jangan simpan lagi ke perangkat
 function simpanLokal(){
-  if(!S) return;
+  if(!S || tuntas) return;
   try{ localStorage.setItem(KEY, JSON.stringify({ S: S, sent: sent, why: lastWhy })); }catch(e){}
 }
 function hapusLokal(){ try{ localStorage.removeItem(KEY); }catch(e){} }
@@ -445,7 +446,7 @@ function kirim(alasan, n){
     .withSuccessHandler(function(r){
       if(!r.ok){
         if(/sudah (dikirim|selesai|tersimpan)/i.test(r.msg || '')){   // server sudah punya jawabannya
-          hapusLokal();
+          hapusLokal(); tuntas = true;
           $('doneTitle').textContent = 'Jawaban sudah tersimpan';
           $('sisa').textContent = r.msg;
           $('retry').hidden = true; $('back').hidden = false;
@@ -455,7 +456,7 @@ function kirim(alasan, n){
         $('back').hidden = false;   // supaya peserta tidak terjebak di layar ini
         return;
       }
-      hapusLokal();
+      hapusLokal(); tuntas = true;
       $('doneTitle').textContent = 'Jawaban tersimpan';
       var res = $('result'); res.innerHTML = '';
       if(r.nilai !== undefined){
