@@ -566,7 +566,10 @@ function aBanding(kat){
     }).join('') + '</table>';
   });
 }
-if(/[?&]admin/.test(location.search) && !S) show('admin');
+if(/[?&]admin/.test(location.search) && !S){
+  show('admin');
+  try{ var sp = sessionStorage.getItem('inst_pw'); if(sp){ $('apw').value = sp; aLogin(); } }catch(e){}   // kembali dari layar live tanpa mengetik ulang password
+}
 (function(){ var m = /[?&]kode=(\d+)/.exec(location.search); if(m) $('pw').value = m[1]; })();   // tautan dengan kode terisi otomatis
 </script>
 </body>
