@@ -124,6 +124,7 @@ input.bad{border-color:var(--bad)}
       <button class="btn" onclick="aLogin()">Masuk</button> <button class="btn alt" onclick="show('login')">Kembali</button>
     </div>
     <div id="aMain" hidden>
+      <p style="text-align:right;margin:0 0 10px"><button class="btn alt sm" onclick="aKeluar()">Keluar</button></p>
       <div class="card" style="margin-bottom:16px">
         <h1 style="font-size:19px">Buat sesi tes</h1>
         <div class="row2"><div><label>Judul quiz</label><select id="aKat"></select></div>
@@ -161,7 +162,7 @@ input.bad{border-color:var(--bad)}
 
 <script>
 // Alamat web app Apps Script (hasil Deploy). Halaman ini bisa di-host di GitHub Pages.
-var API_URL = 'https://script.google.com/macros/s/AKfycbwBr5xYb1XCQlicrQ0-jRuALNttqJ0jJjDmoVkS1xvlz8uGQvugQ3qbwJ4DtK4IKcu6/exec';
+var API_URL = 'https://script.google.com/macros/s/AKfycbw22BTvYLDf7iFQCXZWpkpDzY8XZzJt7nSFYJXv9YOrE_es8_3P3B7het7-fTBVabMK/exec';
 
 var loadCnt = 0;
 function loadN(d){ loadCnt += d; document.getElementById('bar').hidden = loadCnt <= 0; }
@@ -522,14 +523,25 @@ function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c
 function aErr(m){ $('aErr').textContent = m || ''; }
 function aCall(fn, args, ok){ google.script.run.withSuccessHandler(ok).withFailureHandler(function(e){ aErr(e.message); alert(e.message); })[fn].apply(null, [AP].concat(args)); }
 function aLogin(){
-  AP = $('apw').value; aErr('');
+  aErr(''); var pw = $('apw').value;
+  google.script.run.withSuccessHandler(function(t){
+    AP = t; try{ localStorage.setItem('inst_tok', t); }catch(e){}   // login satu kali, dipakai juga oleh layar live
+    aMasuk(false);
+  }).withFailureHandler(function(e){ aErr(e.message); }).adm_login(pw);
+}
+function aMasuk(auto){
   google.script.run.withSuccessHandler(function(k){
+    var lv = /[?&]live=(\w+)/.exec(location.search);
+    if(lv){ location.href = 'dashboard.html?id=' + lv[1]; return; }
     $('aLogin').hidden = true; $('aMain').hidden = false;
-    try{ sessionStorage.setItem('inst_pw', AP); }catch(e){}   // dipakai halaman layar live
     $('aKat').innerHTML = k.map(function(x){ return '<option value="' + esc(x.kat) + '">' + esc(x.kat) + ' (' + x.n + ' soal)' + (x.bad ? ' - ' + x.bad + ' kunci belum valid' : '') + '</option>'; }).join('');
     aDaftar();
-  }).withFailureHandler(function(e){ aErr(e.message); }).adm_kategori(AP);
+  }).withFailureHandler(function(e){
+    if(auto && /password|login/i.test(e.message)){ try{ localStorage.removeItem('inst_tok'); }catch(x){} aErr('Sesi login berakhir, silakan masuk lagi.'); }
+    else aErr(e.message);
+  }).adm_kategori(AP);
 }
+function aKeluar(){ try{ localStorage.removeItem('inst_tok'); }catch(e){} location.href = location.pathname + '?admin'; }
 function aBuat(){
   var d = { kat: $('aKat').value, jenis: $('aJenis').value, mode: $('aMode').value, dur: $('aDur').value,
             mulai: Date.parse($('aMulai').value), selesai: Date.parse($('aSelesai').value) };
@@ -566,9 +578,9 @@ function aBanding(kat){
     }).join('') + '</table>';
   });
 }
-if(/[?&]admin/.test(location.search) && !S){
+if(/[?&](admin|live=)/.test(location.search) && !S){
   show('admin');
-  try{ var sp = sessionStorage.getItem('inst_pw'); if(sp){ $('apw').value = sp; aLogin(); } }catch(e){}   // kembali dari layar live tanpa mengetik ulang password
+  try{ var tk = localStorage.getItem('inst_tok'); if(tk){ AP = tk; aMasuk(true); } }catch(e){}   // sudah login: tidak perlu password lagi
 }
 (function(){ var m = /[?&]kode=(\d+)/.exec(location.search); if(m) $('pw').value = m[1]; })();   // tautan dengan kode terisi otomatis
 </script>
