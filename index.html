@@ -25,6 +25,7 @@ input:focus,button:focus-visible{outline:3px solid #9fc3f5;outline-offset:1px}
 .btn{background:var(--blue);color:#fff;border:0;border-radius:6px;padding:12px 20px;font-size:16px;font-weight:600;cursor:pointer}
 .btn.alt{background:#fff;color:var(--blue);border:1px solid var(--blue)}
 .btn.go{background:var(--ok)}
+.btn.del{background:#fff;color:var(--bad);border:1px solid var(--bad)}
 .btn:disabled{opacity:.5;cursor:default}
 .err{color:var(--bad);margin-top:12px;min-height:22px;font-size:14px}
 .err.show{background:#fdecea;border:1px solid #f2b8b5;border-radius:6px;padding:10px 12px;font-weight:600}
@@ -162,7 +163,7 @@ input.bad{border-color:var(--bad)}
 
 <script>
 // Alamat web app Apps Script (hasil Deploy). Halaman ini bisa di-host di GitHub Pages.
-var API_URL = 'https://script.google.com/macros/s/AKfycbw22BTvYLDf7iFQCXZWpkpDzY8XZzJt7nSFYJXv9YOrE_es8_3P3B7het7-fTBVabMK/exec';
+var API_URL = 'https://script.google.com/macros/s/AKfycbz-FDkw6s6SnVctybbOn2UDINRMe8d5HF1tpwOEKs25qf8tV9uHXdv_BGLSFeQot41x/exec';
 
 var loadCnt = 0;
 function loadN(d){ loadCnt += d; document.getElementById('bar').hidden = loadCnt <= 0; }
@@ -217,6 +218,29 @@ function togglePw(){
   $(id).addEventListener('keydown', function(e){ if(e.key === 'Enter' && !$('btnLogin').disabled) doLogin(); });
 });
 
+// ===== Layar tidak redup (Screen Wake Lock) =====
+// Aktif sejak peserta masuk lobi / mulai mengerjakan, dilepas setelah jawaban dikirim.
+var wake = null, jaga = false;
+function kunciLayar(){
+  jaga = true;
+  try{
+    if(!('wakeLock' in navigator) || wake || document.hidden) return;
+    navigator.wakeLock.request('screen').then(function(w){
+      wake = w;
+      w.addEventListener('release', function(){ if(wake === w) wake = null; });
+    }).catch(function(){ wake = null; });
+  }catch(e){ wake = null; }
+}
+function lepasLayar(){
+  jaga = false;
+  try{ if(wake) wake.release(); }catch(e){}
+  wake = null;
+}
+// Wake lock otomatis lepas saat tab disembunyikan, jadi dipasang lagi saat kembali.
+document.addEventListener('visibilitychange', function(){ if(!document.hidden && jaga) kunciLayar(); });
+// Sentuhan juga memasang ulang (sebagian HP menolak tanpa interaksi pengguna).
+document.addEventListener('click', function(){ if(jaga) kunciLayar(); });
+
 // ===== Penyimpanan lokal (bertahan saat refresh) =====
 var tuntas = false;   // true setelah server mengonfirmasi jawaban: jangan simpan lagi ke perangkat
 function simpanLokal(){
@@ -241,6 +265,7 @@ function jawabAsli(){
 function lobby(m){
   busy(true); $('btnLogin').innerHTML = '<span class="spin"></span>Menunggu instructor...'; $('loadmsg').hidden = true;
   $('rule').textContent = m || 'Menunggu instructor memulai tes. Jangan tutup halaman ini.';
+  kunciLayar();   // layar tetap menyala selama menunggu di lobi
   setTimeout(function(){ if(!S) doLogin(true); }, 6000 + Math.random() * 6000);   // jeda acak agar server tidak kebanjiran
 }
 var slowId = null;
@@ -260,6 +285,7 @@ function doLogin(p){
     .withSuccessHandler(function(r){
       busy(false);
       if(!r || !r.ok){
+        lepasLayar();
         err((r && r.msg) || 'Kode gabung tidak ditemukan. Periksa kembali kode dari instructor.', true);
         $('pw').select(); return;
       }
@@ -291,6 +317,7 @@ function mulai(){
   $('timer').hidden = false;
   window.onbeforeunload = function(){ return 'Ujian sedang berjalan.'; };
   show('exam'); render(); tick();
+  kunciLayar();   // layar tidak redup selama ujian
   clearInterval(timerId); clearInterval(autoId);
   timerId = setInterval(tick, 500);
   autoId = setInterval(autosave, AUTOSAVE_MS);
@@ -422,6 +449,7 @@ window.addEventListener('blur', function(){
 window.addEventListener('pagehide', function(){ simpanLokal(); });
 
 function tampilKirim(alasan){
+  lepasLayar();   // ujian selesai: layar boleh redup lagi
   clearInterval(timerId); clearInterval(autoId);
   window.onbeforeunload = null;
   $('confirm').hidden = true;
@@ -564,12 +592,18 @@ function aDaftar(){
         '<button class="btn alt sm" onclick="location.href=\'dashboard.html?id=' + s.id + '\'">Layar live</button>' +
         '<button class="btn alt sm" onclick="aBanding(aL[' + i + '].kat)">Pre vs Post</button>' +
         (s.mode === 'live' && s.state === 'menunggu' ? '<button class="btn go sm" onclick="aMulai(\'' + s.id + '\')">Mulai</button>' : '') +
-        (s.state !== 'selesai' || s.fin < s.peserta ? '<button class="btn sm" style="background:var(--bad)" onclick="aAkhiri(\'' + s.id + '\')">Akhiri</button>' : '') + '</td></tr>';
+        (s.state !== 'selesai' || s.fin < s.peserta ? '<button class="btn sm" style="background:var(--bad)" onclick="aAkhiri(\'' + s.id + '\')">Akhiri</button>' : '') +
+        '<button class="btn del sm" onclick="aHapus(' + i + ')">Hapus</button></td></tr>';
     }).join('') + '</table>' : '<p class="sub">Belum ada sesi.</p>';
   });
 }
 function aMulai(id){ if(confirm('Mulai tes sekarang untuk semua peserta?')) aCall('adm_mulai', [id], function(){ location.href = 'dashboard.html?id=' + id; }); }   // langsung ke layar live
 function aAkhiri(id){ if(confirm('Akhiri sesi dan nilai semua jawaban yang belum dikirim?')) aCall('adm_akhiri', [id], function(r){ alert(r.dinilai + ' peserta dinilai otomatis.'); aDaftar(); }); }
+function aHapus(i){
+  var s = aL[i]; if(!s) return;
+  if(!confirm('Hapus sesi ' + s.jenis + ' - ' + s.kat + ' (kode ' + s.kode + ') beserta jawaban ' + s.peserta + ' peserta?\nData tidak bisa dikembalikan.')) return;
+  aCall('adm_hapus', [s.id], function(r){ $('aBand').innerHTML = ''; $('aNew').hidden = true; aDaftar(); });
+}
 function aBanding(kat){
   aCall('adm_banding', [kat], function(l){
     $('aBand').innerHTML = '<h1 style="font-size:17px;margin-top:18px">Pre vs Post - ' + esc(kat) + '</h1><table class="tbl" style="margin-top:12px"><tr><th>Nama</th><th>Pre</th><th>Post</th><th>Selisih</th></tr>' + l.map(function(r){
