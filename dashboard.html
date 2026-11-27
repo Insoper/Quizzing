@@ -65,7 +65,8 @@ button.go{background:var(--ok)} button.stop{background:var(--bad)} button.alt{ba
       <button class="go" id="bMulai" onclick="mulai()" hidden>Mulai tes</button>
       <button class="stop" id="bAkhir" onclick="akhiri()" hidden>Akhiri</button>
       <button class="alt" onclick="tutup()">✕ Tutup</button>
-      <button class="alt" onclick="document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen()">Layar penuh</button></div></div>
+      <button class="alt" onclick="document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen()">Layar penuh</button>
+      <button class="alt" id="bWake" onclick="wakeToggle()" title="Cegah layar meredup">☀ Layar aktif: ...</button></div></div>
   </div>
   <div class="stats">
     <div class="stat"><b id="sJoin">0</b><span>Bergabung</span></div>
@@ -100,10 +101,34 @@ function tutup(){
   location.href = './?admin';
 }
 document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && !document.fullscreenElement && !$('live').hidden) tutup(); });
+
+// ===== Anti redup (Screen Wake Lock) =====
+var wakeLock = null, wakeWanted = true;
+function wakeUI(){
+  var b = $('bWake'); if(!b) return;
+  var ok = !!wakeLock;
+  b.textContent = ok ? '☀ Layar aktif: ON' : '☀ Layar aktif: OFF';
+  b.style.background = ok ? 'var(--ok)' : '#1d3a66';
+}
+function wakeOn(){
+  if(!wakeWanted || wakeLock || document.visibilityState !== 'visible') return;
+  if(!('wakeLock' in navigator)){ $('bWake').textContent = '☀ Tidak didukung browser'; return; }
+  navigator.wakeLock.request('screen').then(function(l){
+    wakeLock = l; wakeUI();
+    l.addEventListener('release', function(){ wakeLock = null; wakeUI(); });
+  }).catch(function(){ wakeLock = null; wakeUI(); });
+}
+function wakeToggle(){
+  wakeWanted = !wakeWanted;
+  if(wakeWanted) wakeOn(); else if(wakeLock){ wakeLock.release(); wakeLock = null; wakeUI(); } else wakeUI();
+}
+document.addEventListener('visibilitychange', wakeOn);       // aktifkan lagi saat kembali ke tab
+['click','touchstart','keydown'].forEach(function(ev){ document.addEventListener(ev, wakeOn, { passive: true }); }); // beberapa browser butuh sentuhan pertama
+setInterval(wakeOn, 15000);                                   // cadangan kalau lock terlepas
 function start(){
   $('live').hidden = false;
   if(started) return; started = true;
-  poll(); setInterval(poll, 3000); setInterval(tick, 1000);
+  poll(); setInterval(poll, 3000); setInterval(tick, 1000); wakeOn();
 }
 function poll(){
   call('adm_dash', [PW, ID]).then(function(d){ $('warn').textContent = ''; render(d); })
